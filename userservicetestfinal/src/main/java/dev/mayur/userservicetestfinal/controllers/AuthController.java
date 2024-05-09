@@ -1,5 +1,6 @@
 package dev.mayur.userservicetestfinal.controllers;
 
+import dev.mayur.userservicetestfinal.dtos.LoginRequestDto;
 import dev.mayur.userservicetestfinal.dtos.SignUpRequestDto;
 import dev.mayur.userservicetestfinal.dtos.UserDto;
 import dev.mayur.userservicetestfinal.services.AuthService;
@@ -27,4 +28,11 @@ public class AuthController {
         return new ResponseEntity<>(userDto, HttpStatus.OK);
     }
 //--------------------------------------------------------------------------------------
+
+    @PostMapping("/login")
+    public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto request){
+        return authService.login(request.getEmail(), request.getPassword());
+
+//--------------------------------------------------------------------------------------
+    }
 }
