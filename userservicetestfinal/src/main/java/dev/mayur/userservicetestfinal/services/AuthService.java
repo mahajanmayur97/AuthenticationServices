@@ -2,6 +2,7 @@ package dev.mayur.userservicetestfinal.services;
 
 import dev.mayur.userservicetestfinal.dtos.UserDto;
 import dev.mayur.userservicetestfinal.models.Session;
+import dev.mayur.userservicetestfinal.models.SessionStatus;
 import dev.mayur.userservicetestfinal.models.User;
 import dev.mayur.userservicetestfinal.repositories.SessionRepository;
 import dev.mayur.userservicetestfinal.repositories.UserRepository;
@@ -19,7 +20,6 @@ import java.util.Optional;
 
 @Service
 public class AuthService {
-
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private UserRepository userRepository;
     private SessionRepository sessionRepository;
@@ -35,32 +35,29 @@ public class AuthService {
          User user = new User();
          user.setEmail(email);
          user.setPassword(bCryptPasswordEncoder.encode(password));
-
          User savedUser = userRepository.save(user);
-
          UserDto userDto = UserDto.from(savedUser);
 
          return userDto;
      }
 //------------------------------------------------------------------------------------
 
-
     public ResponseEntity<UserDto> login(String email, String password) {
         Optional<User> userOptional = userRepository.findByEmail(email);
-        System.out.println("inside /auth/login function");
+//        System.out.println("inside /auth/login function");
         if(userOptional.isEmpty()){
             return null;
         }
-
         User user = userOptional.get();
 
         if(!bCryptPasswordEncoder.matches(password, user.getPassword())){
             throw new RuntimeException("Wrong username password");
         }
-        System.out.println("after sccessfull decrption of password ");
+//        System.out.println("after sccessfull decrption of password ");
         String token = RandomStringUtils.randomAlphanumeric(30);
 
         Session session = new Session();
+        session.setSessionStatus(SessionStatus.ACTIVE);
         session.setToken(token);
         session.setUser(user);
         sessionRepository.save(session);
@@ -75,12 +72,24 @@ public class AuthService {
 
         ResponseEntity<UserDto> response = new ResponseEntity<>(userDto, headers, HttpStatus.OK);
 
-
  //         response.getHeaders().add(HttpHeaders.SET_COOKIE,token);
-
-        System.out.println(response.getHeaders().toString());
+ //       System.out.println(response.getHeaders().toString());
         return response;
     }
 
 //----------------------------------------------------------------------------------------
+
+    public ResponseEntity<Void> logout(String token, Long userId) {
+        Optional<Session> sessionOptional = sessionRepository.findByTokenAndUser_Id(token, userId);
+
+        if (sessionOptional.isEmpty()) {
+            return null;
+        }
+
+        Session session = sessionOptional.get();
+        session.setSessionStatus(SessionStatus.ENDED);
+        sessionRepository.save(session);
+        return ResponseEntity.ok().build();
+    }
+//-----------------------------------------------------------------------------------
 }

@@ -1,6 +1,7 @@
 package dev.mayur.userservicetestfinal.controllers;
 
 import dev.mayur.userservicetestfinal.dtos.LoginRequestDto;
+import dev.mayur.userservicetestfinal.dtos.LogoutRequestDto;
 import dev.mayur.userservicetestfinal.dtos.SignUpRequestDto;
 import dev.mayur.userservicetestfinal.dtos.UserDto;
 import dev.mayur.userservicetestfinal.services.AuthService;
@@ -30,9 +31,16 @@ public class AuthController {
 //--------------------------------------------------------------------------------------
 
     @PostMapping("/login")
-    public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto request){
+    public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto request) {
         return authService.login(request.getEmail(), request.getPassword());
-
-//--------------------------------------------------------------------------------------
     }
+//--------------------------------------------------------------------------------------
+
+        @PostMapping("/logout")
+        public ResponseEntity<Void> logout(@RequestBody LogoutRequestDto request){
+            return authService.logout(request.getToken(), request.getUserId());
+    }
+//--------------------------------------------------------------------------------------
+
+
 }
