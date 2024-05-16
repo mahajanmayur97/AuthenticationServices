@@ -6,6 +6,8 @@ import dev.mayur.userservicetestfinal.models.SessionStatus;
 import dev.mayur.userservicetestfinal.models.User;
 import dev.mayur.userservicetestfinal.repositories.SessionRepository;
 import dev.mayur.userservicetestfinal.repositories.UserRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.MacAlgorithm;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -15,14 +17,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
+import javax.crypto.SecretKey;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class AuthService {
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private UserRepository userRepository;
-    private SessionRepository sessionRepository;
+    private static SessionRepository sessionRepository;
 
     @Autowired
     public AuthService(BCryptPasswordEncoder bCryptPasswordEncoder, UserRepository userRepository,SessionRepository sessionRepository){
@@ -32,6 +38,8 @@ public class AuthService {
     }
 //---------------------------------------------------------------------------------
      public UserDto signUp(String email, String password) {
+        System.out.println(email);
+         System.out.println(password);
          User user = new User();
          user.setEmail(email);
          user.setPassword(bCryptPasswordEncoder.encode(password));
@@ -56,6 +64,20 @@ public class AuthService {
 //        System.out.println("after sccessfull decrption of password ");
         String token = RandomStringUtils.randomAlphanumeric(30);
 
+        MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS256
+        SecretKey key = alg.key().build();
+
+        Map<String, Object> jsonForJwt = new HashMap<>();
+        jsonForJwt.put("email", user.getEmail());
+//        jsonForJwt.put("roles", user.getRoles());
+        jsonForJwt.put("createdAt", new Date());
+        jsonForJwt.put("expiryAt", new Date(LocalDate.now().plusDays(3).toEpochDay()));
+
+        token = Jwts.builder()
+                .claims(jsonForJwt)
+                .signWith(key, alg)
+                .compact();
+
         Session session = new Session();
         session.setSessionStatus(SessionStatus.ACTIVE);
         session.setToken(token);
@@ -72,7 +94,7 @@ public class AuthService {
 
         ResponseEntity<UserDto> response = new ResponseEntity<>(userDto, headers, HttpStatus.OK);
 
- //         response.getHeaders().add(HttpHeaders.SET_COOKIE,token);
+ //       response.getHeaders().add(HttpHeaders.SET_COOKIE,token);
  //       System.out.println(response.getHeaders().toString());
         return response;
     }
@@ -92,4 +114,22 @@ public class AuthService {
         return ResponseEntity.ok().build();
     }
 //-----------------------------------------------------------------------------------
+
+    public static SessionStatus validate(String token, Long userId){
+        System.out.println(token+" | "+userId);
+        Optional<Session> sessionOptional = sessionRepository.findByTokenAndUser_Id(token, userId);
+      System.out.println("Inside validate method");
+        if (sessionOptional.isEmpty()) {
+            return SessionStatus.ENDED;
+//            return null;
+        }
+
+        Session session = sessionOptional.get();
+
+        if (!session.getSessionStatus().equals(SessionStatus.ACTIVE)) {
+            return SessionStatus.ENDED;
+        }
+
+        return SessionStatus.ACTIVE;
+    }
 }
