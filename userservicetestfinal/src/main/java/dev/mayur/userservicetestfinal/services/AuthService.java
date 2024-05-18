@@ -1,11 +1,14 @@
 package dev.mayur.userservicetestfinal.services;
 
 import dev.mayur.userservicetestfinal.dtos.UserDto;
+import dev.mayur.userservicetestfinal.models.Role;
 import dev.mayur.userservicetestfinal.models.Session;
 import dev.mayur.userservicetestfinal.models.SessionStatus;
 import dev.mayur.userservicetestfinal.models.User;
 import dev.mayur.userservicetestfinal.repositories.SessionRepository;
 import dev.mayur.userservicetestfinal.repositories.UserRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -19,16 +22,13 @@ import org.springframework.util.MultiValueMapAdapter;
 
 import javax.crypto.SecretKey;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class AuthService {
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private UserRepository userRepository;
-    private static SessionRepository sessionRepository;
+    private SessionRepository sessionRepository;
 
     @Autowired
     public AuthService(BCryptPasswordEncoder bCryptPasswordEncoder, UserRepository userRepository,SessionRepository sessionRepository){
@@ -115,13 +115,11 @@ public class AuthService {
     }
 //-----------------------------------------------------------------------------------
 
-    public static SessionStatus validate(String token, Long userId){
-        System.out.println(token+" | "+userId);
+    public SessionStatus validate(String token, Long userId){
         Optional<Session> sessionOptional = sessionRepository.findByTokenAndUser_Id(token, userId);
-      System.out.println("Inside validate method");
+
         if (sessionOptional.isEmpty()) {
             return SessionStatus.ENDED;
-//            return null;
         }
 
         Session session = sessionOptional.get();
@@ -129,7 +127,35 @@ public class AuthService {
         if (!session.getSessionStatus().equals(SessionStatus.ACTIVE)) {
             return SessionStatus.ENDED;
         }
+        Jws<Claims> claimsJws = Jwts.parser()
+                .build()
+                .parseSignedClaims(token);
 
+        String email = (String) claimsJws.getPayload().get("email");
+        List<Role> roles = (List<Role>) claimsJws.getPayload().get("roles");
+        Date createdAt = (Date) claimsJws.getPayload().get("createdAt");
+
+        if (createdAt.before(new Date())) {
+            return SessionStatus.ENDED;
+        }
+
+        return SessionStatus.ACTIVE;
+    }
+//---------------------------------------------------------------
+
+    public SessionStatus validate1(String token){
+        System.out.println("Inside Us-validate");
+        Optional<Session> sessionOptional = sessionRepository.findByToken(token);
+
+        if (sessionOptional.isEmpty()) {
+            return SessionStatus.ENDED;
+        }
+
+        Session session = sessionOptional.get();
+
+        if (!session.getSessionStatus().equals(SessionStatus.ACTIVE)) {
+            return SessionStatus.ENDED;
+        }
         return SessionStatus.ACTIVE;
     }
 }

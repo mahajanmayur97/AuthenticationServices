@@ -6,17 +6,14 @@ import dev.mayur.userservicetestfinal.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
     @Autowired
     private AuthService authService;
-
+    @Autowired
     public AuthController(AuthService authService){
         this.authService = authService;
     }
@@ -40,12 +37,17 @@ public class AuthController {
     }
 //--------------------------------------------------------------------------------------
        @PostMapping("/validate")
-       public ResponseEntity<SessionStatus> validateToken(ValidateTokenRequestDto request){
-           System.out.println(request.getToken());
-           System.out.println(request.getUserId());
-           SessionStatus sessionStatus = AuthService.validate(request.getToken(), request.getUserId());
+       public ResponseEntity<SessionStatus> validateToken(@RequestBody ValidateTokenRequestDto request){
+//           System.out.println(request.getToken());
+//           System.out.println(request.getUserId());
+           SessionStatus sessionStatus = this.authService.validate(request.getToken(), request.getUserId());
 
            return new ResponseEntity<>(sessionStatus, HttpStatus.OK);
        }
 //--------------------------------------------------------------------------------------
+@PostMapping("/validate1")
+public ResponseEntity<Boolean> validateToken1(@RequestBody String token){
+    SessionStatus sessionStatus = this.authService.validate1(token);
+    return new ResponseEntity<>(sessionStatus == SessionStatus.ACTIVE, HttpStatus.OK);
+ }
 }
